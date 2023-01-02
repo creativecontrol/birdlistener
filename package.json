@@ -1,0 +1,29 @@
+{
+  "name": "birdlistener",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron ."
+  },
+  "author": "t@creativecontrol.cc",
+  "license": "ISC",
+  "devDependencies": {
+    "@electron/rebuild": "^3.2.10",
+    "electron": "^22.0.0"
+  },
+  "dependencies": {
+    "@magenta/music": "^1.23.1",
+    "midi": "^2.0.0",
+    "midi-player-js": "^2.0.16"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/creativecontrol/birdlistener.git"
+  },
+  "bugs": {
+    "url": "https://github.com/creativecontrol/birdlistener/issues"
+  },
+  "homepage": "https://github.com/creativecontrol/birdlistener#readme",
+  "description": ""
+}
