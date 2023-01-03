@@ -148,7 +148,8 @@ function updateWorkingState(active, inactive) {
 
 function updateRecordBtn(defaultState) {
   const el = btnRecord.firstElementChild;
-  el.textContent = defaultState ? 'Record audio' : 'Stop'; 
+  el.textContent = defaultState ? 'Record audio' : 'Stop';
+  recording.hidden = defaultState;
 }
 
 function resetUIState() {

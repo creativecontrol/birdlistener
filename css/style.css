@@ -64,6 +64,18 @@ input[type="file"] {
   display: none;
 }
 
+.logo {
+  background-image: url("../images/BirdListener_logo_1.png");
+  background-size: cover;
+  display: block;
+  height: 160px;
+  right: 10px;
+  position: absolute;
+  top: 14px;
+  width: 160px;
+  z-index: 1;
+}
+
 .button {
   -webkit-appearance: none;
   display: inline-block;
@@ -253,6 +265,18 @@ input[type="file"] {
   display: none !important;
 }
 
+#recording {
+  animation: pulsing-fade 1.2s ease-in-out infinite;
+  display: block;
+  height: 225px;
+  width: 100%;
+}
+
+#recording img {
+  display: block;
+  height: 225px;
+  margin: auto;
+}
 
 #players {
   text-align: center;

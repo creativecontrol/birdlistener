@@ -28,6 +28,7 @@ const msFloor = 200;
 
 const numBirds = 4;
 let birds = [];
+let birdEvents = [];
 const birdPorts = [2, 3, 4, 5];
 let settings;
 
@@ -37,6 +38,16 @@ process.on('message', (message) => {
     if (message.type == 'settings') {
         settings = message.data;
         console.log(`birds settings updated ${settings.numBirds}`);
+    } else if (message.type == 'start') {
+        if (birds.length <= 0) {
+            makeBirds();
+        }
+    } else if (message.type == 'stop') {
+        // Birds will finish playing their currently scheduled files
+        birds = [];
+    } else if (message.type == 'panic') {
+        birds = [];
+        stopAllBirdEvents();
     }
 })
 
@@ -103,9 +114,18 @@ function makeBirds() {
 }
 
 function startBird(index) {
-    setTimeout(() => {
+    const id = setTimeout(() => {
         birdNote(index);
     }, rand(msRange) + msFloor);
+
+    birdEvents.push(id);
+}
+
+function stopAllBirdEvents(id) {
+    birdEvents.forEach((event) => {
+        clearTimeout(event);
+    });
+    birdEvents = [];
 }
 
 function updateFiles() {
