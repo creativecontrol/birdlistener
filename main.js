@@ -45,6 +45,12 @@ function updateSettings (event, _settings) {
   }
 }
 
+function birdControl (event, control) {
+  if (birds) {
+    birds.send({type: control});
+  }
+}
+
 const createWindow = () => {
   const win = new BrowserWindow({
     width: 800,
@@ -56,6 +62,7 @@ const createWindow = () => {
 
   ipcMain.on('store-transcription', storeTranscription);
   ipcMain.on('update-settings', updateSettings);
+  ipcMain.on('bird-control', birdControl);
 
   win.loadFile('index.html');
 

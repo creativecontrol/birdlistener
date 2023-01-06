@@ -15,17 +15,20 @@ let outputOptions = [];
 let settings = {
   numBirds: 4,
   inputActive: true,
-  inputs: [],
+  inputs: [0],
   inputChannel: 'all',
   inputEventType: '',
   inputEventNumber: 0,
   inputOnValue: 127,
   inputOffValue: 0,
   outputActive: true,
-  outputs: [],
+  outputs: [0,0,0,0],
 };
 
+let isBirdPlaying = false;
+
 setupListeners();
+updateBirdSettings();
 
 function setupListeners() {
   settingsDialogOpen.onclick = () => {
@@ -74,6 +77,20 @@ function setupListeners() {
         btnRecord.disabled = true;
       });
     }
+  });
+
+  playBirds.addEventListener('click', (e) => {
+    if (isBirdPlaying) {
+      isBirdPlaying = false;
+      updateBirdButton(true);
+      // stop birds
+      birdListener.birdControl('stop');
+    } else {
+      birdListener.birdControl('start');
+      isBirdPlaying = true;
+      updateBirdButton(false);
+    }
+
   });
 
   fileInput.addEventListener('change', (e) => {
@@ -152,10 +169,16 @@ function updateRecordBtn(defaultState) {
   recording.hidden = defaultState;
 }
 
+function updateBirdButton(defaultState) {
+  const el = playBirds.firstElementChild;
+  el.textContent = defaultState ? 'Play Birds' : 'Stop Birds';
+}
+
 function resetUIState() {
   btnUpload.classList.remove('working');
   btnUpload.removeAttribute('disabled');
   btnRecord.classList.remove('working');
+  playBirds.classList.remove('working');
   if (!recordingBroken) {
     btnRecord.removeAttribute('disabled');
   }
@@ -269,21 +292,28 @@ function storeSettings() {
 
   console.debug('stored settings', settings);
 
-  birdListener.updateSettings(JSON.stringify(settings));
+  updateBirdSettings();
+  updateBirdButton(true);
+  isBirdPlaying = false;
 
   settingsDialog.hidden = true;
 
+}
+
+function updateBirdSettings() {
+  birdListener.updateSettings(JSON.stringify(settings));
 }
 
 function loadMidiInputsAndOutputs(_midiAccess) {
   _midiAccess.inputs.forEach((port, key) => {
     const opt = document.createElement("option");
     opt.text = port.name;
+    opt.value = port.id;
     document.getElementById("midiInput").add(opt);
   });
 
   _midiAccess.outputs.forEach((port, key) => {
-    outputOptions.push(port.name);
+    outputOptions.push({name: port.name, id: port.id});
   });
 }
 
@@ -312,7 +342,8 @@ function updateNumberOfBirds() {
       
       for (let j = 0; j < outputOptions.length; j++) {
         const opt = document.createElement('option');
-        opt.text = outputOptions[j];
+        opt.text = outputOptions[j].name;
+        opt.id = outputOptions[j].id;
         thisSelect.add(opt);
       }
 

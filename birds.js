@@ -15,6 +15,7 @@
 */
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const MidiPlayer = require('midi-player-js');
 const midi = require('midi');
 const { start } = require('repl');
@@ -26,11 +27,12 @@ let midiFiles;
 const msRange = 10000;
 const msFloor = 200;
 
-const numBirds = 4;
+let numBirds = 4;
 let birds = [];
 let birdEvents = [];
-const birdPorts = [2, 3, 4, 5];
+let birdPorts = [2, 3, 4, 5];
 let settings;
+let birdsPlaying = false;
 
 process.on('message', (message) => {
 
@@ -38,17 +40,26 @@ process.on('message', (message) => {
     if (message.type == 'settings') {
         settings = message.data;
         console.log(`birds settings updated ${settings.numBirds}`);
+        numBirds = settings.numBirds || numBirds;
+        birdPorts = settings.outputs || birdPorts;
+
+        if (settings.outputs && os.platform() == 'win32') {
+            // Windows has the MS General MIDI as port 0 of the OS. The WebMIDI api does not.
+            birdPorts = birdPorts.map(x => x+1);
+        }
+
+        stopAllBirds();
+
     } else if (message.type == 'start') {
         if (birds.length <= 0) {
             makeBirds();
         }
+        birdsPlaying = true;
     } else if (message.type == 'stop') {
         // Birds will finish playing their currently scheduled files
-        birds = [];
-    } else if (message.type == 'panic') {
-        birds = [];
-        stopAllBirdEvents();
-    }
+        console.log(`bird Events ${birdEvents}`);
+        stopAllBirds();
+    } 
 })
 
 function rand(range) {
@@ -56,14 +67,16 @@ function rand(range) {
 };
 
 function birdNote(birdNum) {
-    if (midiFiles.length > 0) {
-        let fileIndex = rand(midiFiles.length);
-        let file = filePath + midiFiles[fileIndex];
-        console.debug(`Bird ${birdNum} playing ${file}`);
-        birds[birdNum].loadFile(file);
-    } else {
-        // Keep running the bird until there are files to play.
-        startBird(birdNum);
+   if (birdsPlaying) {
+        if (midiFiles.length > 0) {
+            let fileIndex = rand(midiFiles.length);
+            let file = filePath + midiFiles[fileIndex];
+            console.debug(`Bird ${birdNum} playing ${file}`);
+            birds[birdNum].loadFile(file);
+        } else {
+            // Keep running the bird until there are files to play.
+            startBird(birdNum);
+        }
     }
 };
 
@@ -115,17 +128,24 @@ function makeBirds() {
 
 function startBird(index) {
     const id = setTimeout(() => {
+        console.log(`my event id ${id}`);
         birdNote(index);
     }, rand(msRange) + msFloor);
 
     birdEvents.push(id);
 }
 
-function stopAllBirdEvents(id) {
+function stopAllBirds() {
+    birdsPlaying = false;
+    birds.forEach((bird) => {
+        bird.stop();
+    });
+
     birdEvents.forEach((event) => {
         clearTimeout(event);
     });
     birdEvents = [];
+    birds = [];
 }
 
 function updateFiles() {
@@ -150,7 +170,7 @@ function updateSettings() {
 
 watchMidiFiles();
 updateFiles(); // make this return when files are read
-makeBirds();
+// makeBirds();
 
 
 
