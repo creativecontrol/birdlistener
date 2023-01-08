@@ -176,7 +176,9 @@ async function transcribeFromFile(blob) {
       console.debug(visualizer.noteSequence);
       
       // In Electron conversion to MIDI will happen on the NODEJS side because of Blob passing issues
-      if (visualizer.noteSequence.length > 14) {
+      // When no musical events are found basic data is still returned; a consistent 14 bytes.
+      const sequenceHeaderLength = 14;
+      if (visualizer.noteSequence.length > sequenceHeaderLength) {
         showVisualizer();
         window.birdListener.storeTranscription(visualizer.noteSequence);
       } else {
