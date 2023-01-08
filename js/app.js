@@ -31,6 +31,90 @@ let isBirdPlaying = false;
 setupListeners();
 updateBirdSettings();
 
+/**
+ * All Functions
+ */
+
+/**
+ * 
+ * @returns PLAYERS.soundfont
+ */
+function initPlayers() {
+  PLAYERS.synth = new mm.Player(false, {
+    run: (note) => {
+      const currentNotePosition = visualizer.redraw(note);
+
+      // See if we need to scroll the container.
+      const containerWidth = container.getBoundingClientRect().width;
+      if (currentNotePosition > (container.scrollLeft + containerWidth)) {
+        container.scrollLeft = currentNotePosition - 20;
+      }
+    },
+    stop: () => {container.classList.remove('playing')}
+  });
+
+  PLAYERS.soundfont = new mm.SoundFontPlayer('https://storage.googleapis.com/magentadata/js/soundfonts/salamander');
+  // TODO: fix this after magenta 1.1.15
+  PLAYERS.soundfont.callbackObject = {
+    run: (note) => {
+      const currentNotePosition = visualizer.redraw(note);
+
+      // See if we need to scroll the container.
+      const containerWidth = container.getBoundingClientRect().width;
+      if (currentNotePosition > (container.scrollLeft + containerWidth)) {
+        container.scrollLeft = currentNotePosition - 20;
+      }
+    },
+    stop: () => {container.classList.remove('playing')}
+  };
+  return PLAYERS.soundfont;
+}
+
+/**
+ * 
+ * @returns model
+ */
+function initModel() {
+  const model = new mm.OnsetsAndFrames('https://storage.googleapis.com/magentadata/js/checkpoints/transcription/onsets_frames_uni');
+  
+  model.initialize().then(() => {
+    resetUIState();
+    modelLoading.hidden = true;
+    modelReady.hidden = false;
+  });
+  
+  // Things are slow on Safari.
+  if (window.webkitOfflineAudioContext) {
+    safariWarning.hidden = false;
+  }
+  
+  // Things are very broken on ios12.
+  if (navigator.userAgent.indexOf('iPhone OS 12_0') >= 0) {
+    iosError.hidden = false;
+    buttons.hidden = true;
+  }
+  return model;
+}
+
+/**
+ * 
+ */
+function initUI() {
+  navigator.mediaDevices.enumerateDevices()
+  .then(gotAudioDevices)
+  .catch(handleAudioError);
+
+  navigator.requestMIDIAccess().then((access) => {
+    midiAccess = access;
+    loadMidiInputsAndOutputs(access);
+    storeSettings();
+    updateNumberOfBirds();
+  });
+}
+
+/**
+ * 
+ */
 function setupListeners() {
   settingsDialogOpen.onclick = () => {
     console.debug('opening settings dialog');
@@ -42,6 +126,7 @@ function setupListeners() {
   };
 
   settingsCancel.onclick = () => {
+    recallSettings();
     settingsDialog.hidden = true;
   }
 
@@ -108,6 +193,66 @@ function setupListeners() {
 
 }
 
+/**
+ * initialize or update MIDI selectors in UI
+ * @param {*} _midiAccess 
+ */
+function loadMidiInputsAndOutputs(_midiAccess) {
+  _midiAccess.inputs.forEach((port, key) => {
+    const opt = document.createElement("option");
+    opt.text = port.name;
+    opt.value = port.id;
+    document.getElementById("midiInput").add(opt);
+  });
+
+  _midiAccess.outputs.forEach((port, key) => {
+    outputOptions.push({name: port.name, id: port.id});
+  });
+
+  updateMidiListener();
+}
+
+/**
+ * MIDI message formatting helper function
+ * @param {*} message 
+ * @returns MIDI message object
+ */
+function parseMidiMessage(message) {
+  let command = message.data[0] >> 4;
+  let commandType = '';
+  switch(command) {
+    case 8:
+      commandType = 'noteOff';
+      break;
+    case 9:
+      commandType = 'noteOn';
+      break;
+    case 11:
+      commandType = 'cc';
+      break;
+  }
+
+  return {
+    command: commandType,
+    channel: message.data[0] & 0xf,
+    note: message.data[1],
+    velocity: message.data[2]
+  }
+}
+
+/**
+ * Save MIDI file manually
+ * @param {*} event 
+ */
+function saveMidi(event) {
+  event.stopImmediatePropagation();
+  saveAs(new File([mm.sequenceProtoToMidi(visualizer.noteSequence)], `transcription_${filenum}.mid`));
+  filenum += 1;
+}
+
+/**
+ * Rebuild MIDI message listener when initialized or when settings are stored
+ */
 function updateMidiListener() {
   if (settings.inputActive) {
     let selectedInput = settings.inputs[0];
@@ -133,32 +278,12 @@ function updateMidiListener() {
       }
     }
   }
-  
 }
 
-function parseMidiMessage(message) {
-  let command = message.data[0] >> 4;
-  let commandType = '';
-  switch(command) {
-    case 8:
-      commandType = 'noteOff';
-      break;
-    case 9:
-      commandType = 'noteOn';
-      break;
-    case 11:
-      commandType = 'cc';
-      break;
-  }
-
-  return {
-    command: commandType,
-    channel: message.data[0] & 0xf,
-    note: message.data[1],
-    velocity: message.data[2]
-  }
-}
-
+/**
+ * Transcribe the recorded or uploaded audio file
+ * @param {*} blob 
+ */
 async function transcribeFromFile(blob) {
   hideVisualizer();
   hideNoTransription();
@@ -189,6 +314,11 @@ async function transcribeFromFile(blob) {
   });
 }
 
+/**
+ * 
+ * @param {*} event 
+ * @param {*} isSynthPlayer 
+ */
 function setActivePlayer(event, isSynthPlayer) {
   document.querySelector('button.player.active').classList.remove('active');
   event.target.classList.add('active');
@@ -197,11 +327,9 @@ function setActivePlayer(event, isSynthPlayer) {
   startPlayer();
 }
 
-function stopPlayer() {
-  player.stop();
-  container.classList.remove('playing');
-}
-
+/**
+ * 
+ */
 function startPlayer() {
   container.scrollLeft = 0;
   container.classList.add('playing');
@@ -209,24 +337,53 @@ function startPlayer() {
   player.start(visualizer.noteSequence);
 }
 
-function updateWorkingState(active, inactive) {
+/**
+ * 
+ */
+function stopPlayer() {
+  player.stop();
+  container.classList.remove('playing');
+}
+
+/**
+ * 
+ */
+function hideNoTransription() {
+  noTranscription.hidden = true;
+}
+
+/**
+ * 
+ */
+function showNoTranscription() {
+  transcribingMessage.hidden = true;
+  hideVisualizer();
+  noTranscription.hidden = false;
+}
+
+/**
+ * 
+ */
+function hideVisualizer() {
+  players.hidden = true;
+  saveBtn.hidden = true;
+  container.hidden = true;
+}
+
+/**
+ * 
+ */
+function showVisualizer() {
+  container.hidden = false;
+  saveBtn.hidden = false;
+  players.hidden = false;
+  transcribingMessage.hidden = true;
   help.hidden = true;
-  transcribingMessage.hidden = false;
-  active.classList.add('working');
-  inactive.setAttribute('disabled', true);
 }
 
-function updateRecordBtn(defaultState) {
-  const el = btnRecord.firstElementChild;
-  el.textContent = defaultState ? 'Record audio' : 'Stop';
-  recording.hidden = defaultState;
-}
-
-function updateBirdButton(defaultState) {
-  const el = playBirds.firstElementChild;
-  el.textContent = defaultState ? 'Play Birds' : 'Stop Birds';
-}
-
+/**
+ * 
+ */
 function resetUIState() {
   btnUpload.classList.remove('working');
   btnUpload.removeAttribute('disabled');
@@ -237,103 +394,42 @@ function resetUIState() {
   }
 }
 
-function hideVisualizer() {
-  players.hidden = true;
-  saveBtn.hidden = true;
-  container.hidden = true;
+/**
+ * 
+ * @param {*} defaultState 
+ */
+function updateBirdButton(defaultState) {
+  const el = playBirds.firstElementChild;
+  el.textContent = defaultState ? 'Play Birds' : 'Stop Birds';
 }
 
-function showVisualizer() {
-  container.hidden = false;
-  saveBtn.hidden = false;
-  players.hidden = false;
-  transcribingMessage.hidden = true;
+/**
+ * 
+ * @param {*} defaultState 
+ */
+function updateRecordBtn(defaultState) {
+  const el = btnRecord.firstElementChild;
+  el.textContent = defaultState ? 'Record audio' : 'Stop';
+  recording.hidden = defaultState;
+}
+
+/**
+ * 
+ * @param {*} active 
+ * @param {*} inactive 
+ */
+function updateWorkingState(active, inactive) {
   help.hidden = true;
+  transcribingMessage.hidden = false;
+  active.classList.add('working');
+  inactive.setAttribute('disabled', true);
 }
 
-function showNoTranscription() {
-  transcribingMessage.hidden = true;
-  hideVisualizer();
-  noTranscription.hidden = false;
-}
-
-function hideNoTransription() {
-  noTranscription.hidden = true;
-}
-
-function saveMidi(event) {
-  event.stopImmediatePropagation();
-  saveAs(new File([mm.sequenceProtoToMidi(visualizer.noteSequence)], `transcription_${filenum}.mid`));
-  filenum += 1;
-}
-
-function initPlayers() {
-  PLAYERS.synth = new mm.Player(false, {
-    run: (note) => {
-      const currentNotePosition = visualizer.redraw(note);
-
-      // See if we need to scroll the container.
-      const containerWidth = container.getBoundingClientRect().width;
-      if (currentNotePosition > (container.scrollLeft + containerWidth)) {
-        container.scrollLeft = currentNotePosition - 20;
-      }
-    },
-    stop: () => {container.classList.remove('playing')}
-  });
-
-  PLAYERS.soundfont = new mm.SoundFontPlayer('https://storage.googleapis.com/magentadata/js/soundfonts/salamander');
-  // TODO: fix this after magenta 1.1.15
-  PLAYERS.soundfont.callbackObject = {
-    run: (note) => {
-      const currentNotePosition = visualizer.redraw(note);
-
-      // See if we need to scroll the container.
-      const containerWidth = container.getBoundingClientRect().width;
-      if (currentNotePosition > (container.scrollLeft + containerWidth)) {
-        container.scrollLeft = currentNotePosition - 20;
-      }
-    },
-    stop: () => {container.classList.remove('playing')}
-  };
-  return PLAYERS.soundfont;
-}
-
-function initModel() {
-  const model = new mm.OnsetsAndFrames('https://storage.googleapis.com/magentadata/js/checkpoints/transcription/onsets_frames_uni');
-  
-  model.initialize().then(() => {
-    resetUIState();
-    modelLoading.hidden = true;
-    modelReady.hidden = false;
-  });
-  
-  // Things are slow on Safari.
-  if (window.webkitOfflineAudioContext) {
-    safariWarning.hidden = false;
-  }
-  
-  // Things are very broken on ios12.
-  if (navigator.userAgent.indexOf('iPhone OS 12_0') >= 0) {
-    iosError.hidden = false;
-    buttons.hidden = true;
-  }
-  return model;
-}
-
-function initUI() {
-  navigator.mediaDevices.enumerateDevices()
-  .then(gotDevices)
-  .catch(handleError);
-
-  navigator.requestMIDIAccess().then((access) => {
-    midiAccess = access;
-    loadMidiInputsAndOutputs(access);
-    storeSettings();
-    updateNumberOfBirds();
-  });
-}
-
-function gotDevices(deviceInfos) {
+/**
+ * 
+ * @param {*} deviceInfos 
+ */
+function gotAudioDevices(deviceInfos) {
   audioInputSelect.innerHTML = '';
 
   for (let i = 0; i !== deviceInfos.length; ++i) {
@@ -347,6 +443,14 @@ function gotDevices(deviceInfos) {
   }
 
   settings.audioSource = audioInputSelect.value;
+}
+
+/**
+ * 
+ * @param {*} error 
+ */
+function handleAudioError(error) {
+  console.log('navigator.MediaDevices.getUserMedia error: ', error.message, error.name);
 }
 
 function updateAudioInput() {
@@ -373,14 +477,30 @@ function updateAudioInput() {
   });
 }
 
-function handleError(error) {
-  console.log('navigator.MediaDevices.getUserMedia error: ', error.message, error.name);
-}
 
+/**
+ * Recall current settings to UI when settings pane cancelled
+ */
 function recallSettings() {
+  audioInputSelect = settings.audioSource;
+  midiInActive = settings.inputActive;
+  midiInput.selectedIndex = settings.inputs[0];
+  midiChannel.value = settings.inputChannel;
+  eventType.value = settings.inputEventType;
+  eventNumber.value = settings.inputEventNumber;
+  onValue.value = settings.inputOnValue;
+  offValue.value = settings.inputOffValue;
+  numberOfBirds.value = settings.numBirds;
+  midiOutActive.value = settings.outputActive;
 
+  midiOutSelects.querySelectorAll("select").forEach((element, idx) => {
+    element.selectedIndex = settings.outputs[idx];
+  });
 }
 
+/**
+ * 
+ */
 function storeSettings() {
   settings.audioSource = audioInputSelect.value || undefined;
   settings.inputActive = midiInActive.value || true;
@@ -414,25 +534,16 @@ function storeSettings() {
 
 }
 
+/**
+ * 
+ */
 function updateBirdSettings() {
   birdListener.updateSettings(JSON.stringify(settings));
 }
 
-function loadMidiInputsAndOutputs(_midiAccess) {
-  _midiAccess.inputs.forEach((port, key) => {
-    const opt = document.createElement("option");
-    opt.text = port.name;
-    opt.value = port.id;
-    document.getElementById("midiInput").add(opt);
-  });
-
-  _midiAccess.outputs.forEach((port, key) => {
-    outputOptions.push({name: port.name, id: port.id});
-  });
-
-  updateMidiListener();
-}
-
+/**
+ * 
+ */
 function updateNumberOfBirds() {
   console.debug('updating number of birds');
   const outputs = document.getElementById('midiOutSelects');

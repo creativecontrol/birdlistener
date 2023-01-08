@@ -292,7 +292,7 @@ input[type="file"] {
 #settingsDialog {
   background-color: var(--middle);
   display: flex;
-  filter: drop-shadow(0 3mm 4mm rgb(160, 0, 210));
+  filter: drop-shadow(0 3mm 3mm #F05476);
   flex-direction: column;
   left: calc(50% - (75%*0.5));
   min-height: 400px;
