@@ -305,6 +305,10 @@ input[type="file"] {
 #settingsHeading {
 }
 
+#audioInputSelect {
+  max-width: 400px;
+}
+
 #input {
   border-bottom: solid;
   flex: 1;
