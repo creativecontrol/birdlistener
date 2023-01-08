@@ -61,6 +61,11 @@
           transcription is significantly slower on Safari than other browsers.
           </div>
         </div>
+
+        <div id="noTranscription" hidden>
+          It seems like there were no events in that transcription attempt. <br> 
+          I didn't store a file. 
+        </div>
         
         <div class="container" id="container" hidden>
           <canvas id="canvas"></canvas>
@@ -98,6 +103,12 @@
       <div id="settingsHeading">
         <h2>Settings</h2>
       </div>
+      <div id="audio">
+        <label for="audioInputSelect">MIDI Input</label>
+          <select id="audioInputSelect">
+          </select>
+      </div>
+      <hr>
       <div id="input">
         <div>
           <label for="midiInActive">Active</label>
@@ -126,6 +137,9 @@
         </div>
 
         <div>
+          <label for="useVelocity">Active</label>
+          <input type="checkbox" name="" id="useVelocity" >
+
           <label for="onValue">On Value</label>
           <input type="number" id="onValue" min="0" max="127" value="127">
           

@@ -14,6 +14,7 @@ let midiAccess;
 let outputOptions = [];
 let settings = {
   numBirds: 4,
+  audioSource: '',
   inputActive: true,
   inputs: ['input-0'],
   inputChannel: 'all',
@@ -44,6 +45,15 @@ function setupListeners() {
     settingsDialog.hidden = true;
   }
 
+  document.addEventListener('keydown', (event) => {
+    if (event.repeat) {
+      return;
+    } 
+
+    if (event.code == 'Space') {
+      btnRecord.click();
+    }
+  })
 
   btnRecord.addEventListener('click', () => {
     // Things are broken on old ios
@@ -59,23 +69,7 @@ function setupListeners() {
       updateRecordBtn(true);
       recorder.stop();
     } else {
-      // Request permissions to record audio. Also this sometimes fails on Linux. I don't know.
-      navigator.mediaDevices.getUserMedia({audio: true}).then(stream => {
-        isRecording = true;
-        updateRecordBtn(false);
-        hideVisualizer();
-
-        recorder = new window.MediaRecorder(stream);
-        recorder.addEventListener('dataavailable', (e) => {
-          updateWorkingState(btnRecord, btnUpload);
-          requestAnimationFrame(() => requestAnimationFrame(() => transcribeFromFile(e.data)));
-        });
-        recorder.start();
-      }, () => {
-        recordingBroken = true;
-        recordingError.hidden = false;
-        btnRecord.disabled = true;
-      });
+      updateAudioInput();
     }
   });
 
@@ -167,6 +161,7 @@ function parseMidiMessage(message) {
 
 async function transcribeFromFile(blob) {
   hideVisualizer();
+  hideNoTransription();
   
   model.transcribeFromAudioFile(blob).then((ns) => {
     PLAYERS.soundfont.loadSamples(ns).then(() => {
@@ -176,14 +171,18 @@ async function transcribeFromFile(blob) {
           pixelsPerTimeStep: window.innerWidth < 500 ? null: 80,
       });
       resetUIState();
-      showVisualizer();
-      let midi = [mm.sequenceProtoToMidi(visualizer.noteSequence)];
+      
+      
       console.debug(visualizer.noteSequence);
-      console.debug(midi);
-
+      
       // In Electron conversion to MIDI will happen on the NODEJS side because of Blob passing issues
-      window.birdListener.storeTranscription(visualizer.noteSequence);
-
+      if (visualizer.noteSequence.length > 14) {
+        showVisualizer();
+        window.birdListener.storeTranscription(visualizer.noteSequence);
+      } else {
+        showNoTranscription();
+        console.debug('It seems like there were no events in that transcription.');
+      }
     });
   });
 }
@@ -250,6 +249,16 @@ function showVisualizer() {
   help.hidden = true;
 }
 
+function showNoTranscription() {
+  transcribingMessage.hidden = true;
+  hideVisualizer();
+  noTranscription.hidden = false;
+}
+
+function hideNoTransription() {
+  noTranscription.hidden = true;
+}
+
 function saveMidi(event) {
   event.stopImmediatePropagation();
   saveAs(new File([mm.sequenceProtoToMidi(visualizer.noteSequence)], `transcription_${filenum}.mid`));
@@ -310,6 +319,10 @@ function initModel() {
 }
 
 function initUI() {
+  navigator.mediaDevices.enumerateDevices()
+  .then(gotDevices)
+  .catch(handleError);
+
   navigator.requestMIDIAccess().then((access) => {
     midiAccess = access;
     loadMidiInputsAndOutputs(access);
@@ -318,11 +331,56 @@ function initUI() {
   });
 }
 
+function gotDevices(deviceInfos) {
+  audioInputSelect.innerHTML = '';
+
+  for (let i = 0; i !== deviceInfos.length; ++i) {
+    const deviceInfo = deviceInfos[i];
+    const option = document.createElement('option');
+    option.value = deviceInfo.deviceId;
+    if (deviceInfo.kind === 'audioinput') {
+      option.text = deviceInfo.label || `microphone ${audioInputSelect.length + 1}`;
+      audioInputSelect.appendChild(option);
+    }
+  }
+
+  settings.audioSource = audioInputSelect.value;
+}
+
+function updateAudioInput() {
+  // Request permissions to record audio. Also this sometimes fails on Linux. I don't know.
+  navigator.mediaDevices.getUserMedia({
+    audio: {deviceId: settings.audioSource ? {exact: settings.audioSource} : undefined},
+  })
+  .then(stream => {
+    isRecording = true;
+    updateRecordBtn(false);
+    hideVisualizer();
+    hideNoTransription();
+
+    recorder = new window.MediaRecorder(stream);
+    recorder.addEventListener('dataavailable', (e) => {
+      updateWorkingState(btnRecord, btnUpload);
+      requestAnimationFrame(() => requestAnimationFrame(() => transcribeFromFile(e.data)));
+    });
+    recorder.start();
+  }, () => {
+    recordingBroken = true;
+    recordingError.hidden = false;
+    btnRecord.disabled = true;
+  });
+}
+
+function handleError(error) {
+  console.log('navigator.MediaDevices.getUserMedia error: ', error.message, error.name);
+}
+
 function recallSettings() {
 
 }
 
 function storeSettings() {
+  settings.audioSource = audioInputSelect.value || undefined;
   settings.inputActive = midiInActive.value || true;
   settings.inputs = [];
   settings.inputs.push(midiInput.selectedIndex) || [0];
