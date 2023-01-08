@@ -15,7 +15,7 @@ let outputOptions = [];
 let settings = {
   numBirds: 4,
   inputActive: true,
-  inputs: [0],
+  inputs: ['input-0'],
   inputChannel: 'all',
   inputEventType: '',
   inputEventNumber: 0,
@@ -111,6 +111,58 @@ function setupListeners() {
       startPlayer();
     }
   });
+
+}
+
+function updateMidiListener() {
+  if (settings.inputActive) {
+    let selectedInput = settings.inputs[0];
+    let inputs = midiAccess.inputs;
+    console.debug(`selected midi Input ${selectedInput}`);
+    console.debug(inputs.get(selectedInput));
+
+    if (inputs.get(selectedInput)) {
+      inputs.get(selectedInput).onmidimessage = (message) => {
+        let midiMessage = parseMidiMessage(message);
+        console.debug(midiMessage);
+
+        if (midiMessage.commandType === '') {
+          return;
+        }
+
+        if ((settings.inputChannel === 'all' || parseInt(settings.inputChannel) === midiMessage.channel) && 
+          settings.inputEventType === midiMessage.command && parseInt(settings.inputEventNumber) === midiMessage.note ) {
+            console.debug(`correct trigger received`);
+            btnRecord.click();
+        }
+        
+      }
+    }
+  }
+  
+}
+
+function parseMidiMessage(message) {
+  let command = message.data[0] >> 4;
+  let commandType = '';
+  switch(command) {
+    case 8:
+      commandType = 'noteOff';
+      break;
+    case 9:
+      commandType = 'noteOn';
+      break;
+    case 11:
+      commandType = 'cc';
+      break;
+  }
+
+  return {
+    command: commandType,
+    channel: message.data[0] & 0xf,
+    note: message.data[1],
+    velocity: message.data[2]
+  }
 }
 
 async function transcribeFromFile(blob) {
@@ -261,6 +313,7 @@ function initUI() {
   navigator.requestMIDIAccess().then((access) => {
     midiAccess = access;
     loadMidiInputsAndOutputs(access);
+    storeSettings();
     updateNumberOfBirds();
   });
 }
@@ -292,6 +345,7 @@ function storeSettings() {
 
   console.debug('stored settings', settings);
 
+  updateMidiListener();
   updateBirdSettings();
   updateBirdButton(true);
   isBirdPlaying = false;
@@ -315,6 +369,8 @@ function loadMidiInputsAndOutputs(_midiAccess) {
   _midiAccess.outputs.forEach((port, key) => {
     outputOptions.push({name: port.name, id: port.id});
   });
+
+  updateMidiListener();
 }
 
 function updateNumberOfBirds() {
