@@ -1,57 +1,107 @@
+/**
+ * ElectronJS main function for birdListener
+ */
+
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const mm = require('@magenta/music/node/core');
 const fs = require('fs');
 const { fork } = require('child_process');
 
-const transcriptionsPath = '../transcriptions/';
+
 let settings; 
+let userData = app.getPath('userData');
+let settingsPath = path.join(userData, 'settings.json')
+let musicPath = app.getPath('music');
+const transcriptionPath = path.join(musicPath,'bird-transcriptions/');
 
-let birds = fork('birds.js');
+let birds;
 
-birds.on('close', (code) => {
-  console.log(`child process exited with code ${code}`);
-});
+function createBirds() {
+  birds = fork(path.join(__dirname, 'birds.js'), {
+    stdio: ['ipc'],
+  });
+
+  ipcMain.on('bird-control', birdControl);
+  
+  // birds.on('close', (code) => {
+  //   console.debug(`child process exited with code ${code}`);
+  // });
+  
+  // birds.on('exit', () => {
+  //   console.debug('I am an ex-parrot');
+  // });
+}
 
 function storeTranscription (event, transcription) {
     let midi = mm.sequenceProtoToMidi(transcription);
-    console.log('storing transcription', midi);
+    console.debug('storing transcription', midi);
 
     let data = Buffer.from(midi);
 
-    if (!fs.existsSync(transcriptionsPath)) {
-        fs.mkdir(transcriptionsPath, (err) => {
+    if (!fs.existsSync(transcriptionPath)) {
+        fs.mkdir(transcriptionPath, (err) => {
             console.error(err);
         });
     }
 
     const time = Date.now();
-    fs.writeFile(`${transcriptionsPath}transcription_${time}.mid`, data, (err) => {
-        if (err) return console.log(err);
+    fs.writeFile(`${transcriptionPath}transcription_${time}.mid`, data, (err) => {
+        if (err) return console.error(err);
     });
 }
 
+function storeSettings (settings) {
+  fs.writeFileSync(settingsPath, JSON.stringify(settings));
+}
+
+function loadSettings (event) {
+  let settings; 
+  
+  try {
+    settings = JSON.parse(fs.readFileSync(settingsPath, {encoding: "utf8"}));
+    // console.debug('loaded settings', settings);
+
+    if (birds) {
+      if (birds.connected) {
+        birds.send({type: 'settings', data: settings});
+      } else {
+        console.error('birds not connected')
+      }
+    }
+
+    return settings;
+  } catch (error) {
+    console.error('error loading settings file', error);
+
+  }
+}
+
 function updateSettings (event, _settings) {
-  console.log('updating settings', _settings);
+  console.debug('updating settings', _settings);
   settings = JSON.parse(_settings);
   if (settings.outputActive && !_settings.outputActive) {
     // turn off output
   } else if (!settings.outputActive && _settings.outputActive) {
     // turn on output
   }
+  settings.transcriptionPath = transcriptionPath;
+  
+  storeSettings(settings);
 
-  if (birds) {
+  if (birds.connected) {
     birds.send({type: 'settings', data: settings});
   }
 }
 
 function birdControl (event, control) {
-  if (birds) {
+  if (birds.connected) {
     birds.send({type: control});
   }
 }
 
 const createWindow = () => {
+
   const win = new BrowserWindow({
     width: 800,
     height: 600,
@@ -60,25 +110,29 @@ const createWindow = () => {
       },
   })
 
-  ipcMain.on('store-transcription', storeTranscription);
-  ipcMain.on('update-settings', updateSettings);
-  ipcMain.on('bird-control', birdControl);
+  
 
-  win.loadFile('index.html');
+  win.loadFile(path.join(__dirname, 'index.html'));
 
   win.removeMenu();
+
+  createBirds();
 };
 
 app.whenReady().then(() => {
+  ipcMain.on('store-transcription', storeTranscription);
+  ipcMain.on('update-settings', updateSettings);
 
-    createWindow();
+  ipcMain.handle('load-settings', loadSettings);
+
+  createWindow();
   
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) {
-        createWindow();
-      }
-    });
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
   });
+});
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit()

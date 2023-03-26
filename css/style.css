@@ -171,8 +171,9 @@ input[type="file"] {
   background: var(--middle);
   color: white;
   border-radius: 0;
+  height: 300px;
+  overflow: hidden;
   padding: 16px;
-  min-height: 350px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -194,6 +195,7 @@ input[type="file"] {
 .container {
   position: relative;
   overflow-x: auto;
+  overflow-y: hidden;
   padding: 10px 0;
   margin: 10px;
   cursor: pointer;

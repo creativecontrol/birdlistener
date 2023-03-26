@@ -1,0 +1,8 @@
+meter {
+    writing-mode: horizontal-tb !important;
+    appearance: auto;
+    display: inline-block;
+    height: 1em;
+    width: 10em;
+    -webkit-user-modify: read-only !important;
+}

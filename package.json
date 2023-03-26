@@ -4,18 +4,28 @@
   "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "electron ."
+    "start": "electron-forge start --inspect-electron",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
   },
   "author": "t@creativecontrol.cc",
   "license": "ISC",
   "devDependencies": {
+    "@electron-forge/cli": "^6.0.5",
+    "@electron-forge/maker-deb": "^6.0.5",
+    "@electron-forge/maker-rpm": "^6.0.5",
+    "@electron-forge/maker-squirrel": "^6.0.5",
+    "@electron-forge/maker-zip": "^6.0.5",
     "@electron/rebuild": "^3.2.10",
-    "electron": "^22.0.0"
+    "@rabbitholesyndrome/electron-forge-maker-portable": "^0.1.1",
+    "electron": "^23.2.0"
   },
   "dependencies": {
     "@magenta/music": "^1.23.1",
+    "electron-squirrel-startup": "^1.0.0",
     "midi": "^2.0.0",
-    "midi-player-js": "^2.0.16"
+    "midi-player-js": "^2.0.16",
+    "node-abi": "^3.33.0"
   },
   "repository": {
     "type": "git",
@@ -25,5 +35,5 @@
     "url": "https://github.com/creativecontrol/birdlistener/issues"
   },
   "homepage": "https://github.com/creativecontrol/birdlistener#readme",
-  "description": ""
+  "description": "Machine Learning Audio to MIDI transcriber."
 }

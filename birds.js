@@ -1,18 +1,21 @@
-/*
-  Create 4 Players
-  Receive a start message, load each player with a random file from the list 
-  wait a random amount of time then play back the file
-
-  Each bird will have its own midi interface output to simplify channel separation.
-  Sounds will be created by a DAW
-
-  when the file is done, load a new file, wait a random amount of time and play again
-  
-  receive: 1
-  wait: x milliseconds
-  reply: 1, <file path>, bang
-
+/**
+ * Bird definition - instantiated by main.js
+ * 
+ *  Create 4 Players
+ * Receive a start message, load each player with a random file from the list 
+ * wait a random amount of time then play back the file
+ *
+ * Each bird will have its own midi interface output to simplify channel separation.
+ * Sounds will be created by a DAW
+ *
+ * when the file is done, load a new file, wait a random amount of time and play again
+ * Expose the timing values to the main settings panel
+ *
+ * receive: 1
+ * wait: x milliseconds
+ * reply: 1, <file path>, bang 
 */
+
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -21,11 +24,12 @@ const midi = require('midi');
 const { start } = require('repl');
 const midiOuts = [];
 
-const filePath = '../transcriptions/';
+let filePath ;
 let midiFiles;
+let fileWatcher;
 
-const msRange = 10000;
-const msFloor = 200;
+let msRange = 15000;
+let msFloor = 3000;
 
 let numBirds = 4;
 let birds = [];
@@ -36,12 +40,20 @@ let birdsPlaying = false;
 
 process.on('message', (message) => {
 
-    console.log(`birds received message ${JSON.stringify(message)}`);
+    console.debug(`birds received message ${JSON.stringify(message)}`);
     if (message.type == 'settings') {
         settings = message.data;
-        console.log(`birds settings updated ${settings.numBirds}`);
+        if(settings.transcriptionPath) {
+            filePath = path.normalize(settings.transcriptionPath);
+            updateFiles();
+            watchMidiFiles();
+        }
         numBirds = settings.numBirds || numBirds;
         birdPorts = settings.outputs || birdPorts;
+        msFloor = parseInt(settings.birdTimeFloor) || msFloor;
+        msRange = parseInt(settings.birdTimeCeiling) || msRange;
+
+        console.debug(`birds settings updated ${numBirds} ${msFloor} ${msRange}`);
 
         if (settings.outputs && os.platform() == 'win32') {
             // Windows has the MS General MIDI as port 0 of the OS. The WebMIDI api does not.
@@ -57,18 +69,20 @@ process.on('message', (message) => {
         birdsPlaying = true;
     } else if (message.type == 'stop') {
         // Birds will finish playing their currently scheduled files
-        console.log(`bird Events ${birdEvents}`);
+        console.debug(`bird Events ${birdEvents}`);
         stopAllBirds();
-    } 
+    }
 })
 
 function rand(range) {
-    return Math.floor(Math.random() * range);
+    const randomValue = Math.floor(Math.random() * range);
+    console.debug(`new random: ${randomValue}`);
+    return randomValue;
 };
 
 function birdNote(birdNum) {
    if (birdsPlaying) {
-        if (midiFiles.length > 0) {
+        if (midiFiles && midiFiles.length > 0) {
             let fileIndex = rand(midiFiles.length);
             let file = filePath + midiFiles[fileIndex];
             console.debug(`Bird ${birdNum} playing ${file}`);
@@ -128,9 +142,9 @@ function makeBirds() {
 
 function startBird(index) {
     const id = setTimeout(() => {
-        console.log(`my event id ${id}`);
+        console.debug(`my event id ${id}`);
         birdNote(index);
-    }, rand(msRange) + msFloor);
+    }, rand(msRange - msFloor) + msFloor);
 
     birdEvents.push(id);
 }
@@ -149,27 +163,35 @@ function stopAllBirds() {
 }
 
 function updateFiles() {
-    fs.readdir(filePath, (err, _midiFiles) => {
-        if (err) {
-            return console.log('Unable to scan directory: ' + err);
-        }
-        midiFiles = _midiFiles;
-    });
+    if (filePath) {
+        fs.readdir(filePath, (err, _midiFiles) => {
+            if (err) {
+                return console.debug('Unable to scan directory: ' + err);
+            }
+            midiFiles = _midiFiles;
+        });
+    }
 }
 
 function watchMidiFiles() {
-    fs.watch(filePath, (eventType, fileName) => {
-        updateFiles();
-    });
-
+    if (filePath) {
+        if (fileWatcher) {
+            fileWatcher.close();
+        }
+        console.debug(`File path ${filePath}`);
+        fileWatcher = fs.watch(filePath, (eventType, fileName) => {
+            updateFiles();
+        });
+    }
 }
 
 function updateSettings() {
 
 }
 
+updateFiles();
 watchMidiFiles();
-updateFiles(); // make this return when files are read
+ 
 // makeBirds();
 
 
