@@ -52,7 +52,6 @@ class BirdListener {
     this.createAudioContext();
     this.setupListeners()
     this.initPostLoad();
-    this.updateBirdSettings();
   }
 
   /**
