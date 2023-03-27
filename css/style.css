@@ -83,6 +83,7 @@ input[type="file"] {
   padding: 6px 14px;
   background: 0;
   border: 0;
+  flex: 1 0 0;
   font-family: inherit;
   font-size: inherit;
   text-transform: uppercase;
@@ -217,6 +218,27 @@ input[type="file"] {
   height: 100px;
   left: calc(50% - 50px);
   top: calc(50% - 50px);
+}
+
+#range {
+  flex: 1 0 0;
+  display: inline-flex;
+  font-size: 14px;
+}
+
+#timer {
+  background-color: white;
+  -webkit-mask-image: url('../images/timer_FILL0_wght400_GRAD0_opsz24.svg');
+  mask-image: url('../images/timer_FILL0_wght400_GRAD0_opsz24.svg');
+  color: white;
+  display: block;
+  height: 24px;
+  margin: 0 10px;
+  width: 24px;
+}
+
+#numbers {
+  margin: auto;
 }
 
 #playIcon > svg, #pauseIcon > svg {

@@ -23,6 +23,7 @@ function createBirds() {
   });
 
   ipcMain.on('bird-control', birdControl);
+  ipcMain.on('bird-range', birdRange);
   
   // birds.on('close', (code) => {
   //   console.debug(`child process exited with code ${code}`);
@@ -97,6 +98,12 @@ function updateSettings (event, _settings) {
 function birdControl (event, control) {
   if (birds.connected) {
     birds.send({type: control});
+  }
+}
+
+function birdRange (event, data) {
+  if (birds.connected) {
+    birds.send({type: 'range-update', data: data})
   }
 }
 

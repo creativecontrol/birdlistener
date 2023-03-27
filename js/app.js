@@ -25,10 +25,11 @@ class BirdListener {
     this.player;
     this.midiAccess;
     this.outputOptions = [];
+
     this.settings = {
       numBirds: 4,
       birdTimeFloor: 3000,
-      birdTimeCeiling: 15000,
+      birdTimeRange: 12000,
       audioSource: '',
       inputActive: true,
       inputs: ['input-0'],
@@ -38,7 +39,7 @@ class BirdListener {
       inputOnValue: 127,
       inputOffValue: 0,
       outputActive: true,
-      outputs: [0,0,0,0],
+      outputs: ['output-1','output-1','output-1','output-1'],
       transcriptionPath: './'
     };
 
@@ -190,7 +191,9 @@ class BirdListener {
   }
 
   initModel() {
+    // 'https://storage.googleapis.com/magentadata/js/checkpoints/transcription/onsets_frames_uni'
     const model = new mm.OnsetsAndFrames('https://storage.googleapis.com/magentadata/js/checkpoints/transcription/onsets_frames_uni');
+    // const model = new mm.OnsetsAndFrames('./checkpoints');
     
     model.initialize().then(() => {
       this.resetUIState();
@@ -263,7 +266,7 @@ class BirdListener {
     });
   
     _midiAccess.outputs.forEach((port, key) => {
-      this.outputOptions.push({name: port.name, id: port.id});
+      this.outputOptions.push({name: port.name, value: port.id});
     });
   
     this.updateMidiListener();
@@ -289,11 +292,20 @@ class BirdListener {
         break;
     }
 
-    return {
-      command: commandType,
-      channel: message.data[0] & 0xf,
-      note: message.data[1],
-      velocity: message.data[2]
+    if (commandType = 'cc') {
+      return {
+        command: commandType,
+        channel: message.data[0] & 0xf,
+        controller: message.data[1],
+        value: message.data[2]
+      }
+    } else {
+      return {
+        command: commandType,
+        channel: message.data[0] & 0xf,
+        note: message.data[1],
+        velocity: message.data[2]
+      }
     }
   }
 
@@ -322,8 +334,37 @@ class BirdListener {
           let midiMessage = this.parseMidiMessage(message);
           console.debug(midiMessage);
 
-          if (midiMessage.commandType === '') {
-            return;
+          /**
+           * CC message 14 & 15 control the bird timing range top and bottom respectively.
+           * To make the MIDI range 0-127 more usable the values are multiplied to provide 
+           * millisecond values.
+           * A multiplier of 
+           * 
+           * This top range is added to the bottom range to give a full range of 
+           * 
+           * (bottomRange * rangeMultiplier) to (bottomRange + topRange * rangeMultiplier)
+           * 
+           */
+          if (midiMessage.command === 'cc') {
+            const bottomRangeCC = 14;
+            const topRangeCC = 15;
+            const midiRangeMultiplier = 236;
+
+            if (this.settings.inputChannel === 'all' || midiMessage.channel == parseInt(this.settings.inputChannel)) {
+              console.debug(`CC message received ${midiMessage}`);
+              if (midiMessage.controller == bottomRangeCC) {
+                this.settings.birdTimeFloor = midiMessage.value * midiRangeMultiplier;
+                console.debug(`New Range (ms): ${this.settings.birdTimeFloor} to ${this.settings.birdTimeRange}`);
+                this.updateRangeUI();
+                this.updateBirdRange();
+              }
+              if (midiMessage.controller == topRangeCC) {
+                this.settings.birdTimeRange = midiMessage.value * midiRangeMultiplier;
+                console.debug(`New Range (ms): ${this.settings.birdTimeFloor} to ${this.settings.birdTimeRange}`);
+                this.updateRangeUI();
+                this.updateBirdRange();
+              }
+            }
           }
 
           if ((this.settings.inputChannel === 'all' || parseInt(this.settings.inputChannel) === midiMessage.channel) && 
@@ -331,10 +372,24 @@ class BirdListener {
               console.debug(`correct trigger received`);
               btnRecord.click();
           }
-          
         }
       }
     }
+  }
+
+  updateRangeUI() {
+    let msToSec = 0.001;
+    let floorCalc = (this.settings.birdTimeFloor*msToSec);
+    let ceilingCalc = ((this.settings.birdTimeRange * msToSec) + (this.settings.birdTimeFloor * msToSec));
+    floor.innerText = floorCalc.toFixed(2);
+    ceiling.innerText = ceilingCalc.toFixed(2);
+  }
+
+  updateBirdRange() {
+    birdListener.birdRange(JSON.stringify({
+      floor: this.settings.birdTimeFloor, 
+      range: this.settings.birdTimeRange,
+    }));
   }
 
   /**
@@ -559,7 +614,7 @@ class BirdListener {
   recallSettings() {
     audioInputSelect.value = this.settings.audioSource;
     midiInActive.value = this.settings.inputActive;
-    midiInput.selectedIndex = this.settings.inputs[0];
+    midiInput.value = this.settings.inputs[0];
     midiChannel.value = this.settings.inputChannel;
     eventType.value = this.settings.inputEventType;
     eventNumber.value = this.settings.inputEventNumber;
@@ -567,12 +622,14 @@ class BirdListener {
     offValue.value = this.settings.inputOffValue;
     numberOfBirds.value = this.settings.numBirds;
     birdTimeFloor.value = this.settings.birdTimeFloor;
-    birdTimeCeiling.value = this.settings.birdTimeCeiling;
+    birdTimeRange.value = this.settings.birdTimeRange;
     midiOutActive.value = this.settings.outputActive;
 
     midiOutSelects.querySelectorAll("select").forEach((element, idx) => {
-      element.selectedIndex = this.settings.outputs[idx];
+      element.value = this.settings.outputs[idx];
     });
+
+    this.updateRangeUI();
   }
 
   /**
@@ -582,7 +639,7 @@ class BirdListener {
     this.settings.audioSource = audioInputSelect.value || 0;
     this.settings.inputActive = midiInActive.value || true;
     this.settings.inputs = [];
-    this.settings.inputs.push(midiInput.selectedIndex) || [0];
+    this.settings.inputs.push(midiInput.value) || [0];
 
     
     this.settings.inputChannel = midiChannel.value || 'all';
@@ -593,13 +650,13 @@ class BirdListener {
 
     this.settings.numBirds = numberOfBirds.value || 4;
     this.settings.birdTimeFloor = birdTimeFloor.value || 1000;
-    this.settings.birdTimeCeiling = birdTimeCeiling.value || 10000;
+    this.settings.birdTimeRange = birdTimeRange.value || 10000;
     this.settings.outputActive = midiOutActive.value || true
 
     this.settings.outputs = [];
 
     midiOutSelects.querySelectorAll("select").forEach((element) => {
-      this.settings.outputs.push(element.selectedIndex);
+      this.settings.outputs.push(element.value);
     });
 
     console.debug('stored settings', this.settings);
@@ -607,6 +664,7 @@ class BirdListener {
     this.updateMidiListener();
     this.updateAudioInput();
     this.updateBirdSettings();
+    this.updateRangeUI();
     this.updateBirdButton(true);
     this.isBirdPlaying = false;
 
@@ -650,7 +708,7 @@ class BirdListener {
         for (let j = 0; j < this.outputOptions.length; j++) {
           const opt = document.createElement('option');
           opt.text = this.outputOptions[j].name;
-          opt.id = this.outputOptions[j].id;
+          opt.value = this.outputOptions[j].value;
           thisSelect.add(opt);
         }
 

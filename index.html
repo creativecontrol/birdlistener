@@ -15,8 +15,8 @@
         location.href = 'https:' + window.location.href.substring(window.location.protocol.length);
       }
     </script> -->
-    <script src="https://cdn.jsdelivr.net/npm/@magenta/music@1.2"></script>
-    <!-- <script src="./js/magentaMusic1_2.js"></script> -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/@magenta/music@1.2"></script> -->
+    <script src="./js/magenta-1.7.0.js"></script>
     <script src="./js/app.js" defer></script>
   </head>
   <body>
@@ -99,6 +99,10 @@
         <button class="button" id="playBirds">
           <span class="text">Play Birds</span>
         </button>
+        <div id="range">
+          <span id="timer"></span>
+          <div id="numbers"><span id="floor"></span> to <span id="ceiling"></span> sec.</div>
+        </div>
       </div>
       
     </div>
@@ -164,8 +168,8 @@
         <div>
           <label for="birdTimeFloor">Bird Time Floor</label>
           <input type="number" name="" id="birdTimeFloor" min="0" max="100000" value="3000">
-          <label for="birdTimeCeiling">Bird Time Ceiling</label>
-          <input type="number" name="" id="birdTimeCeiling" min="0" max="100000" value="15000">
+          <label for="birdTimeRange">Bird Time Range</label>
+          <input type="number" name="" id="birdTimeRange" min="0" max="100000" value="15000">
         </div>
         <div id="midiOutSelects">
         </div>

@@ -28,7 +28,7 @@ let filePath ;
 let midiFiles;
 let fileWatcher;
 
-let msRange = 15000;
+let msRange = 12000;
 let msFloor = 3000;
 
 let numBirds = 4;
@@ -51,7 +51,7 @@ process.on('message', (message) => {
         numBirds = settings.numBirds || numBirds;
         birdPorts = settings.outputs || birdPorts;
         msFloor = parseInt(settings.birdTimeFloor) || msFloor;
-        msRange = parseInt(settings.birdTimeCeiling) || msRange;
+        msRange = parseInt(settings.birdTimeRange) || msRange;
 
         console.debug(`birds settings updated ${numBirds} ${msFloor} ${msRange}`);
 
@@ -71,6 +71,9 @@ process.on('message', (message) => {
         // Birds will finish playing their currently scheduled files
         console.debug(`bird Events ${birdEvents}`);
         stopAllBirds();
+    } else if (message.type == 'range-update') {
+        msFloor = message.data.floor;
+        msRange = message.data.range;
     }
 })
 
@@ -144,7 +147,7 @@ function startBird(index) {
     const id = setTimeout(() => {
         console.debug(`my event id ${id}`);
         birdNote(index);
-    }, rand(msRange - msFloor) + msFloor);
+    }, rand(msRange + msFloor) + msFloor);
 
     birdEvents.push(id);
 }
