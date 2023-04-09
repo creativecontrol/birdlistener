@@ -110,30 +110,30 @@ class BirdListener {
       }
     });
   
-    playBirds.addEventListener('click', (e) => {
-      if (this.isBirdPlaying) {
-        this.isBirdPlaying = false;
-        this.updateBirdButton(true);
-        // stop birds (how is this different from window.birdListener?)
-        birdListener.birdControl('stop');
-      } else {
-        birdListener.birdControl('start');
-        this.isBirdPlaying = true;
-        this.updateBirdButton(false);
-      }
+    // playBirds.addEventListener('click', (e) => {
+    //   if (this.isBirdPlaying) {
+    //     this.isBirdPlaying = false;
+    //     this.updateBirdButton(true);
+    //     // stop birds (how is this different from window.birdListener?)
+    //     birdListener.birdControl('stop');
+    //   } else {
+    //     birdListener.birdControl('start');
+    //     this.isBirdPlaying = true;
+    //     this.updateBirdButton(false);
+    //   }
   
-    });
+    // });
   
-    fileInput.addEventListener('change', (e) => {
-      recordingError.hidden = true;
-      this.updateWorkingState(btnUpload, btnRecord);
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        this.transcribeFromFile(e.target.files[0]);
-        fileInput.value = null;
-      }));
+    // fileInput.addEventListener('change', (e) => {
+    //   recordingError.hidden = true;
+    //   this.updateWorkingState(btnUpload, btnRecord);
+    //   requestAnimationFrame(() => requestAnimationFrame(() => {
+    //     this.transcribeFromFile(e.target.files[0]);
+    //     fileInput.value = null;
+    //   }));
       
-      return false;
-    });
+    //   return false;
+    // });
   
     container.addEventListener('click', () => {
       if (this.player.isPlaying()) {
@@ -143,9 +143,9 @@ class BirdListener {
       }
     });
 
-    pianoBtn.addEventListener('click', (event) => {
-      this.setActivePlayer(event, false);
-    });
+    // pianoBtn.addEventListener('click', (event) => {
+    //   this.setActivePlayer(event, false);
+    // });
 
     synthBtn.addEventListener('click', (event) => {
       this.setActivePlayer(event, false);
@@ -172,20 +172,20 @@ class BirdListener {
       stop: () => {container.classList.remove('playing')}
     });
   
-    this.PLAYERS.soundfont = new mm.SoundFontPlayer('https://storage.googleapis.com/magentadata/js/soundfonts/salamander');
-    // TODO: fix this after magenta 1.1.15
-    this.PLAYERS.soundfont.callbackObject = {
-      run: (note) => {
-        const currentNotePosition = this.visualizer.redraw(note);
+    // this.PLAYERS.soundfont = new mm.SoundFontPlayer('https://storage.googleapis.com/magentadata/js/soundfonts/salamander');
+    // // TODO: fix this after magenta 1.1.15
+    // this.PLAYERS.soundfont.callbackObject = {
+    //   run: (note) => {
+    //     const currentNotePosition = this.visualizer.redraw(note);
   
-        // See if we need to scroll the container.
-        const containerWidth = container.getBoundingClientRect().width;
-        if (currentNotePosition > (container.scrollLeft + containerWidth)) {
-          container.scrollLeft = currentNotePosition - 20;
-        }
-      },
-      stop: () => {container.classList.remove('playing')}
-    };
+    //     // See if we need to scroll the container.
+    //     const containerWidth = container.getBoundingClientRect().width;
+    //     if (currentNotePosition > (container.scrollLeft + containerWidth)) {
+    //       container.scrollLeft = currentNotePosition - 20;
+    //     }
+    //   },
+    //   stop: () => {container.classList.remove('playing')}
+    // };
     return this.PLAYERS.synth;
   }
 
@@ -242,7 +242,7 @@ class BirdListener {
   }
 
   initPostLoad() {
-    this.updateNumberOfBirds();
+    // this.updateNumberOfBirds();
     this.model = this.initModel();
     this.player = this.initPlayers();
   }
@@ -264,9 +264,9 @@ class BirdListener {
       document.getElementById("midiInput").add(opt);
     });
   
-    _midiAccess.outputs.forEach((port, key) => {
-      this.outputOptions.push({name: port.name, value: port.id});
-    });
+    // _midiAccess.outputs.forEach((port, key) => {
+    //   this.outputOptions.push({name: port.name, value: port.id});
+    // });
   
     this.updateMidiListener();
   }
@@ -345,25 +345,25 @@ class BirdListener {
            * 
            */
           if (midiMessage.command === 'cc') {
-            const bottomRangeCC = 14;
-            const topRangeCC = 15;
-            const midiRangeMultiplier = 236;
+            // const bottomRangeCC = 14;
+            // const topRangeCC = 15;
+            // const midiRangeMultiplier = 236;
 
-            if (this.settings.inputChannel === 'all' || midiMessage.channel == parseInt(this.settings.inputChannel)) {
-              console.debug(`CC message received ${midiMessage}`);
-              if (midiMessage.controller == bottomRangeCC) {
-                this.settings.birdTimeFloor = midiMessage.value * midiRangeMultiplier;
-                console.debug(`New Range (ms): ${this.settings.birdTimeFloor} to ${this.settings.birdTimeRange}`);
-                this.updateRangeUI();
-                this.updateBirdRange();
-              }
-              if (midiMessage.controller == topRangeCC) {
-                this.settings.birdTimeRange = midiMessage.value * midiRangeMultiplier;
-                console.debug(`New Range (ms): ${this.settings.birdTimeFloor} to ${this.settings.birdTimeRange}`);
-                this.updateRangeUI();
-                this.updateBirdRange();
-              }
-            }
+            // if (this.settings.inputChannel === 'all' || midiMessage.channel == parseInt(this.settings.inputChannel)) {
+            //   console.debug(`CC message received ${midiMessage}`);
+            //   if (midiMessage.controller == bottomRangeCC) {
+            //     this.settings.birdTimeFloor = midiMessage.value * midiRangeMultiplier;
+            //     console.debug(`New Range (ms): ${this.settings.birdTimeFloor} to ${this.settings.birdTimeRange}`);
+            //     this.updateRangeUI();
+            //     this.updateBirdRange();
+            //   }
+            //   if (midiMessage.controller == topRangeCC) {
+            //     this.settings.birdTimeRange = midiMessage.value * midiRangeMultiplier;
+            //     console.debug(`New Range (ms): ${this.settings.birdTimeFloor} to ${this.settings.birdTimeRange}`);
+            //     this.updateRangeUI();
+            //     this.updateBirdRange();
+            //   }
+            // }
           }
 
           if ((this.settings.inputChannel === 'all' || parseInt(this.settings.inputChannel) === midiMessage.channel) && 
@@ -400,7 +400,7 @@ class BirdListener {
     this.hideNoTransription();
     
     this.model.transcribeFromAudioFile(blob).then((ns) => {
-      this.PLAYERS.soundfont.loadSamples(ns).then(() => {
+      // this.PLAYERS.soundfont.loadSamples(ns).then(() => {
         this.visualizer = new mm.Visualizer(ns, canvas, {
             noteRGB: '255, 255, 255', 
             activeNoteRGB: '232, 69, 164', 
@@ -420,7 +420,7 @@ class BirdListener {
           this.showNoTranscription();
           console.debug('It seems like there were no events in that transcription.');
         }
-      });
+      // });
     });
   }
 
@@ -479,10 +479,10 @@ class BirdListener {
   }
 
   resetUIState() {
-    btnUpload.classList.remove('working');
-    btnUpload.removeAttribute('disabled');
+    // btnUpload.classList.remove('working');
+    // btnUpload.removeAttribute('disabled');
     btnRecord.classList.remove('working');
-    playBirds.classList.remove('working');
+    // playBirds.classList.remove('working');
     if (!this.recordingBroken) {
       btnRecord.removeAttribute('disabled');
     }
@@ -516,7 +516,7 @@ class BirdListener {
     help.hidden = true;
     transcribingMessage.hidden = false;
     active.classList.add('working');
-    inactive.setAttribute('disabled', true);
+    // inactive.setAttribute('disabled', true);
   }
 
   /**
@@ -575,7 +575,7 @@ class BirdListener {
     
     this.recorder = new MediaRecorder(stream);
     this.recorder.addEventListener('dataavailable', (e) => {
-      this.updateWorkingState(btnRecord, btnUpload);
+      this.updateWorkingState(btnRecord, null);
       requestAnimationFrame(() => requestAnimationFrame(() => this.transcribeFromFile(e.data)));
     });
     this.recorder.start();
@@ -619,16 +619,16 @@ class BirdListener {
     eventNumber.value = this.settings.inputEventNumber;
     onValue.value = this.settings.inputOnValue;
     offValue.value = this.settings.inputOffValue;
-    numberOfBirds.value = this.settings.numBirds;
-    birdTimeFloor.value = this.settings.birdTimeFloor;
-    birdTimeRange.value = this.settings.birdTimeRange;
-    midiOutActive.value = this.settings.outputActive;
+    // numberOfBirds.value = this.settings.numBirds;
+    // birdTimeFloor.value = this.settings.birdTimeFloor;
+    // birdTimeRange.value = this.settings.birdTimeRange;
+    // midiOutActive.value = this.settings.outputActive;
 
-    midiOutSelects.querySelectorAll("select").forEach((element, idx) => {
-      element.value = this.settings.outputs[idx];
-    });
+    // midiOutSelects.querySelectorAll("select").forEach((element, idx) => {
+    //   element.value = this.settings.outputs[idx];
+    // });
 
-    this.updateRangeUI();
+    // this.updateRangeUI();
   }
 
   /**
@@ -647,25 +647,25 @@ class BirdListener {
     this.settings.inputOnValue = onValue.value || 127,
     this.settings.inputOffValue = offValue.value || 0,
 
-    this.settings.numBirds = numberOfBirds.value || 4;
-    this.settings.birdTimeFloor = birdTimeFloor.value || 1000;
-    this.settings.birdTimeRange = birdTimeRange.value || 10000;
-    this.settings.outputActive = midiOutActive.value || true
+    // this.settings.numBirds = numberOfBirds.value || 4;
+    // this.settings.birdTimeFloor = birdTimeFloor.value || 1000;
+    // this.settings.birdTimeRange = birdTimeRange.value || 10000;
+    // this.settings.outputActive = midiOutActive.value || true
 
-    this.settings.outputs = [];
+    // this.settings.outputs = [];
 
-    midiOutSelects.querySelectorAll("select").forEach((element) => {
-      this.settings.outputs.push(element.value);
-    });
+    // midiOutSelects.querySelectorAll("select").forEach((element) => {
+    //   this.settings.outputs.push(element.value);
+    // });
 
     console.debug('stored settings', this.settings);
 
     this.updateMidiListener();
     this.updateAudioInput();
-    this.updateBirdSettings();
-    this.updateRangeUI();
-    this.updateBirdButton(true);
-    this.isBirdPlaying = false;
+    // this.updateBirdSettings();
+    // this.updateRangeUI();
+    // this.updateBirdButton(true);
+    // this.isBirdPlaying = false;
 
     settingsDialog.hidden = true;
 

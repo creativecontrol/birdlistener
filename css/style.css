@@ -132,7 +132,7 @@ input[type="file"] {
   margin: 0;
 }
 
-.button.player:nth-child(1) {
+/* .button.player:nth-child(1) {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
 }
@@ -140,7 +140,7 @@ input[type="file"] {
 .button.player:nth-child(2) {
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
-}
+} */
 
 .button.player:not(.active) {
   opacity: 0.5;
@@ -191,6 +191,9 @@ input[type="file"] {
   flex-direction: row;
   align-items: center;
   justify-content: center;
+}
+.bottom.button {
+  width: 150px;
 }
 
 .container {

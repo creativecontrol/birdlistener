@@ -110,7 +110,7 @@ function birdRange (event, data) {
 const createWindow = () => {
 
   const win = new BrowserWindow({
-    width: 800,
+    width: 600,
     height: 600,
     webPreferences: {
         preload: path.join(__dirname, 'preload.js'),
@@ -123,7 +123,7 @@ const createWindow = () => {
 
   win.removeMenu();
 
-  createBirds();
+  // createBirds();
 };
 
 app.whenReady().then(() => {
