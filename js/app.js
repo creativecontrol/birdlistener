@@ -473,7 +473,7 @@ class BirdListener {
   showVisualizer() {
     container.hidden = false;
     saveBtn.hidden = false;
-    players.hidden = false;
+    // players.hidden = false;
     transcribingMessage.hidden = true;
     help.hidden = true;
   }
