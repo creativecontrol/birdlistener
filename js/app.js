@@ -11,6 +11,7 @@ class BirdListener {
     this.visualizer;
     this.recorder;
     this.isRecording = false;
+    this.isTranscribing = false;
     this.recordingBroken = false;
     this.PLAYERS = {};
 
@@ -86,6 +87,9 @@ class BirdListener {
     })
   
     btnRecord.addEventListener('click', () => {
+      if (this.isTranscribing) {
+        return;
+      }
       // Things are broken on old ios
       if (!navigator.mediaDevices) {
         this.recordingBroken = true;
@@ -396,6 +400,7 @@ class BirdListener {
    * @param {*} blob 
    */
   async transcribeFromFile(blob) {
+    this.isTranscribing = true;
     this.hideVisualizer();
     this.hideNoTransription();
     
@@ -407,7 +412,7 @@ class BirdListener {
             pixelsPerTimeStep: window.innerWidth < 500 ? null: 80,
         });
         this.resetUIState();
-        
+        this.isTranscribing = false;
         
         console.debug(this.visualizer.noteSequence);
         console.debug(this.visualizer.noteSequence.notes.length);
@@ -619,6 +624,7 @@ class BirdListener {
     eventNumber.value = this.settings.inputEventNumber;
     onValue.value = this.settings.inputOnValue;
     offValue.value = this.settings.inputOffValue;
+    transcriptionPath.value = this.settings.transcriptionPath;
     // numberOfBirds.value = this.settings.numBirds;
     // birdTimeFloor.value = this.settings.birdTimeFloor;
     // birdTimeRange.value = this.settings.birdTimeRange;
@@ -646,6 +652,7 @@ class BirdListener {
     this.settings.inputEventNumber = eventNumber.value || 0,
     this.settings.inputOnValue = onValue.value || 127,
     this.settings.inputOffValue = offValue.value || 0,
+    this.settings.transcriptionPath = transcriptionPath.value || './',
 
     // this.settings.numBirds = numberOfBirds.value || 4;
     // this.settings.birdTimeFloor = birdTimeFloor.value || 1000;

@@ -1,6 +1,6 @@
 module.exports = {
   packagerConfig: {
-    icon: '/images/BirdListener_logo_1'
+    icon: "/images/BirdListener_logo_1",
   },
   rebuildConfig: {},
   makers: [
